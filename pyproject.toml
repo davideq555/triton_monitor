@@ -1,0 +1,33 @@
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+exclude = [
+    "venv",
+    ".venv",
+    "__pycache__",
+    "*.egg-info",
+    "build",
+    "dist",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors (PEP 8)
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "PIE",  # flake8-pie (incluye PIE790: return/break/continue en finally — PEP 765)
+    "RET",  # flake8-return
+    "I",    # isort
+    "N",    # pep8-naming
+    "UP",   # pyupgrade
+]
+ignore = [
+    "E203",  # espaciado compatible con black
+    "E501",  # permitir líneas largas si no exceden mucho
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]  # permitir imports no usados en __init__
+
+[tool.ruff.lint.isort]
+known-first-party = ["triton_telemetry"]
