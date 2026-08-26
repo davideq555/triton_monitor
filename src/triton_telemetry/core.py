@@ -110,14 +110,15 @@ async def query_provider_telemetry(
             raise p_err from err
 
         except httpx.HTTPStatusError as err:
-            # TODO: capturar error HTTP y re-lanzar como NetworkPeeringError
-            n_err = NetworkPeeringError(
-                f"Fallo de conexión o denegación de ruteo de {provider}. "
-                f"Estatus HTTP: {err.response.status_code}."
+            # TODO: capturar error HTTP y re-lanzar como CorruptedPayloadError
+            c_err = CorruptedPayloadError(
+                f"Estatus HTTP no esperado recibido del proveedor {provider}. "
+                f"Código: {err.response.status_code}."
             )
-            n_err.add_note(f"Provider_ID: {provider}")
-            n_err.add_note(f"HTTP_Status_Code: {err.response.status_code}")
-            raise n_err from err
+            c_err.add_note(f"Provider_ID: {provider}")
+            c_err.add_note(f"HTTP_Status_Code: {err.response.status_code}")
+            c_err.add_note(f"Target_Endpoint: {url}")
+            raise c_err from err
 
         except httpx.RequestError as err:
             # TODO: captura genérica de red (DNS, offline, conexión rechazada)
