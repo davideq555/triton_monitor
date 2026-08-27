@@ -3,38 +3,35 @@
 import argparse
 import re
 
-# Formato permitido: cluster-<region>-<numero> (ej. cluster-us-east-01)
-CLUSTER_ID_PATTERN = re.compile(r"^cluster-[a-z0-9]+-[0-9]+$")
 
+def parse_timeout(value: str) -> float:
+    """Sanitiza y valida el tiempo de espera (timeout) para las peticiones HTTP.
 
-def validate_cluster_id(cluster_id: str) -> str:
-    """Valida y limpia el ID de un cluster mediante regex."""
-    if not isinstance(cluster_id, str):
-        msg = "El ID del cluster debe ser una cadena de texto."
-        raise argparse.ArgumentTypeError(msg)
-
-    clean_id = cluster_id.strip().lower()
-
-    if not CLUSTER_ID_PATTERN.match(clean_id):
-        msg = (
-            f"ID de cluster '{cluster_id}' inválido. "
-            "Formato requerido: 'cluster-<region>-<numero>'."
-        )
-        raise argparse.ArgumentTypeError(msg)
-
-    return clean_id
-
-
-def validate_timeout(timeout_val: str | float | int) -> float:
-    """Valida que el timeout esté entre 0.1 y 5.0 segundos."""
+    Debe ser un flotante estrictamente en el rango [0.1, 5.0] segundos.
+    """
     try:
-        val = float(timeout_val)
-    except (ValueError, TypeError) as err:
-        msg = "El timeout debe ser un número válido."
-        raise argparse.ArgumentTypeError(msg) from err
+        val = float(value)
+        if not (0.1 <= val <= 5.0):
+            raise ValueError("El timeout debe estar entre 0.1 y 5.0 segundos.")
+        return val
+    except ValueError as e:
+        raise argparse.ArgumentTypeError(
+            f"Timeout inválido '{value}': {str(e)}"
+        ) from e
 
-    if not 0.1 <= val <= 5.0:
-        msg = "El timeout debe ser un flotante entre 0.1 y 5.0 segundos."
-        raise argparse.ArgumentTypeError(msg)
 
-    return val
+def parse_cluster_id(value: str) -> str:
+    """Valida que el identificador del clúster siga el patrón formal de regex.
+
+    Formato requerido: cluster-<region>-<numero_dos_digitos>
+    (ejemplo: cluster-us-east-01).
+    """
+    pattern = r"^cluster-[a-z]{2,10}-[a-z]+-\d{2}$"
+    clean_val = value.strip().lower()
+
+    if not re.match(pattern, clean_val):
+        raise argparse.ArgumentTypeError(
+            f"El ID del clúster '{value}' no cumple con el formato requerido "
+            "(ejemplo válido: 'cluster-us-east-01')."
+        )
+    return clean_val
