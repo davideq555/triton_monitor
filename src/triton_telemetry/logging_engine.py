@@ -4,6 +4,7 @@ import logging
 import logging.handlers
 import os
 import queue
+import shutil
 import traceback
 from datetime import UTC, datetime
 from pathlib import Path
@@ -44,8 +45,12 @@ class AsyncJSONFormatter(logging.Formatter):
         return error_data
 
     def format(self, record: logging.LogRecord) -> str:
+        # Timestamp ISO 8601 UTC estricto con sufijo 'Z'
+        dt_utc = datetime.fromtimestamp(record.created, tz=UTC)
+        timestamp_str = dt_utc.isoformat().replace("+00:00", "Z")
+
         log_data = {
-            "timestamp": datetime.fromtimestamp(record.created, tz=UTC).isoformat(),
+            "timestamp": timestamp_str,
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
@@ -63,8 +68,9 @@ class AsyncJSONFormatter(logging.Formatter):
             "processName", "process", "taskName"
         }
 
+        # Mapeo dinámico de 'extra' omitiendo propiedades privadas (_)
         for key, value in record.__dict__.items():
-            if key not in standard_keys:
+            if key not in standard_keys and not key.startswith('_'):
                 log_data[key] = value
 
         if record.exc_info:
@@ -91,7 +97,6 @@ class NonBlockingLoggingEngine:
             encoding="utf-8",
         )
 
-        # Si no pasan un formatter por parámetro, usamos por defecto el tuyo
         if formatter is None:
             formatter = AsyncJSONFormatter()
 
@@ -107,7 +112,7 @@ class NonBlockingLoggingEngine:
         def rotator(source, dest):
             with open(source, "rb") as f_in:
                 with gzip.open(dest, "wb", compresslevel=9) as f_out:
-                    f_out.writelines(f_in)
+                    shutil.copyfileobj(f_in, f_out)
             os.remove(source)
 
         def namer(default_name):
