@@ -31,3 +31,15 @@ ignore = [
 
 [tool.ruff.lint.isort]
 known-first-party = ["triton_telemetry"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+    "unit: Tests unitarios aislados",
+    "integration: Tests de integración entre módulos",
+    "e2e: Tests end-to-end con APIs reales",
+    "chaos: Tests de inyección de caos",
+    "hardgate: Tests de hard gates obligatorios",
+    "slow: Tests que requieren red real (pueden ser lentos)",
+]
