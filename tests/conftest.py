@@ -26,16 +26,14 @@ def pytest_collection_modifyitems(config, items):
             item.add_marker(pytest.mark.unit)
         elif "test_integrante_5" in str(test_path):
             item.add_marker(pytest.mark.integration)
-        elif "test_integrante_6" in str(test_path):
-            if "chaos" in item.name:
-                item.add_marker(pytest.mark.chaos)
-            elif "forensic" in str(test_path):
-                item.add_marker(pytest.mark.e2e)
-            else:
-                item.add_marker(pytest.mark.integration)
         elif "test_hard_gates" in str(test_path):
             item.add_marker(pytest.mark.hardgate)
         elif "test_integration" in str(test_path):
+            item.add_marker(pytest.mark.e2e)
+        # Integrante 6: cuando cree sus tests de caos/forense
+        elif "chaos" in str(test_path).lower():
+            item.add_marker(pytest.mark.chaos)
+        elif "forensic" in str(test_path).lower():
             item.add_marker(pytest.mark.e2e)
 
 

@@ -86,14 +86,16 @@ tests/
 ├── test_integrante_5/             # CLI e integración
 │   ├── test_cli_parser.py
 │   └── test_except_handling.py
-├── test_integrante_6/             # Caos y forense
-│   ├── test_chaos_suite.py
-│   └── test_forensic_validator.py
 ├── test_hard_gates/               # Hard gates obligatorios
 │   └── test_pep765_compliance.py
-└── test_integration/              # End-to-end
-    └── test_full_flow.py
+├── test_integration/              # End-to-end
+│   └── test_full_flow.py
+└── [chaos/ o forense/]            # Integrante 6 crea aquí sus tests
+    ├── test_chaos_suite.py        # (a crear por el Integrante 6)
+    └── test_forensic_validator.py # (a crear por el Integrante 6)
 ```
+
+> **Nota:** El Integrante 6 es responsable de **desarrollar** la suite de tests de caos y el validador forense. Por lo tanto, no existen tests pre-creados para este integrante — sus tests son el entregable en sí mismo. Puede crearlos en `tests/chaos/`, `tests/forense/`, o directamente en `tests/`.
 
 ---
 
@@ -895,183 +897,53 @@ pytest tests/test_integrante_5/ -v
 
 ### Integrante 6: Simulación de Caos y Forense
 
-> **⚠️ Nota:** Este integrante desarrolla la suite de pruebas misma.
+> **⚠️ Importante:** Este integrante es responsable de **desarrollar** la suite de pruebas de caos y el validador forense. Por lo tanto, **no existen tests pre-creados para este integrante** — sus tests son el entregable en sí mismo.
 
-#### 3.6.1. Suite de Caos (`test_chaos_suite.py`)
+#### Responsabilidades del Integrante 6
 
-```python
-"""Suite de simulación de caos — pruebas de resiliencia extrema."""
-import subprocess
-import pytest
-import httpx
-import respx
-from triton_telemetry.core import scan_all_providers, PROVIDER_ENDPOINTS
+1. **Suite de Simulación de Caos**: Desarrollar tests automatizados que inyecten fallos reales en las APIs:
+   - Timeout forzado (reducir `--timeout` a `0.1`)
+   - Hosts inexistentes para gatillar `NetworkPeeringError`
+   - Validar que el sistema sobrevive a múltiples fallos concurrentes
 
+2. **Validador de Telemetría JSON**: Desarrollar tests forenses que:
+   - Abran archivos de log comprimidos (`.gz`)
+   - Verifiquen que el JSON contenga el árbol completo de `ExceptionGroups`
+   - Certifique la integridad de los metadatos (timestamps ISO 8601 UTC, notas forenses)
+   - Compruebe la correcta descompresión Gzip
 
-class TestChaosSuite:
-    """Inyección masiva de fallos concurrentes."""
+#### Ubicación de los Tests
 
-    @respx.mock
-    @pytest.mark.asyncio
-    async def test_all_providers_timeout_simultaneously(self):
-        """Todos los proveedores con timeout simultáneo."""
-        from triton_telemetry.exceptions import ProviderTimeoutError
-        
-        for provider in ["AWS", "Azure", "GCP"]:
-            respx.get(PROVIDER_ENDPOINTS[provider]).mock(
-                side_effect=httpx.TimeoutException("mass timeout")
-            )
-        
-        with pytest.raises(ExceptionGroup) as exc_info:
-            await scan_all_providers(["AWS", "Azure", "GCP"], timeout=0.1)
-        
-        eg = exc_info.value
-        assert len(eg.exceptions) == 3
-        assert all(isinstance(e, ProviderTimeoutError) for e in eg.exceptions)
+El Integrante 6 puede crear sus tests en:
+- `tests/chaos/` (recomendado para tests de caos)
+- `tests/forense/` (recomendado para validador forense)
+- Directamente en `tests/` si prefiere
 
-    @respx.mock
-    @pytest.mark.asyncio
-    async def test_mixed_failure_types(self):
-        """Mezcla de timeout + HTTP error + network error simultáneos."""
-        from triton_telemetry.exceptions import (
-            ProviderTimeoutError, CorruptedPayloadError, NetworkPeeringError
-        )
-        
-        respx.get(PROVIDER_ENDPOINTS["AWS"]).mock(
-            side_effect=httpx.TimeoutException("timeout")
-        )
-        respx.get(PROVIDER_ENDPOINTS["Azure"]).mock(
-            return_value=httpx.Response(504)
-        )
-        respx.get(PROVIDER_ENDPOINTS["GCP"]).mock(
-            side_effect=httpx.ConnectError("DNS failure")
-        )
-        
-        with pytest.raises(ExceptionGroup) as exc_info:
-            await scan_all_providers(["AWS", "Azure", "GCP"], timeout=1.0)
-        
-        types = {type(e) for e in exc_info.value.exceptions}
-        assert ProviderTimeoutError in types
-        assert CorruptedPayloadError in types
-        assert NetworkPeeringError in types
+#### Marcadores Automáticos
 
-    @respx.mock
-    @pytest.mark.asyncio
-    async def test_nonexistent_host_raises_network_peering(self):
-        """Host inexistente debe gatillar NetworkPeeringError."""
-        from triton_telemetry.exceptions import NetworkPeeringError
-        from triton_telemetry.core import query_provider_telemetry
-        
-        respx.get("https://jsonplaceholder.typicode.com/posts/1").mock(
-            side_effect=httpx.ConnectError("Name or service not known")
-        )
-        
-        with pytest.raises(NetworkPeeringError):
-            await query_provider_telemetry("AWS", timeout=1.0)
+El `conftest.py` detecta automáticamente directorios con "chaos" o "forensic" en el nombre y aplica los markers `@pytest.mark.chaos` o `@pytest.mark.e2e` respectivamente.
 
-    def test_cli_chaos_mode_survives_all_failures(self):
-        """La CLI completa debe sobrevivir al modo caos sin crash."""
-        result = subprocess.run(
-            ["python3", "src/app_operator.py", "AWS", "Azure", "GCP",
-             "-c", "cluster-us-west-02", "-t", "1.0", "--chaos"],
-            capture_output=True, text=True, timeout=30
-        )
-        assert result.returncode == 0
-        assert "Traceback" not in result.stderr
+#### Ejemplo de Estructura (a crear por el Integrante 6)
+
+```
+tests/
+├── chaos/
+│   ├── __init__.py
+│   ├── test_timeout_injection.py
+│   ├── test_network_failures.py
+│   └── test_concurrent_chaos.py
+└── forense/
+    ├── __init__.py
+    ├── test_log_integrity.py
+    └── test_gzip_decompression.py
 ```
 
-#### 3.6.2. Validador Forense de Telemetría JSON (`test_forensic_validator.py`)
+#### Herramientas Disponibles
 
-```python
-"""Validador forense de archivos de log JSON comprimidos."""
-import json
-import gzip
-import pytest
-import subprocess
-import tempfile
-from pathlib import Path
-
-
-class TestForensicValidator:
-    """Valida la integridad de los logs JSON generados."""
-
-    @pytest.fixture(autouse=True)
-    def run_chaos_and_collect_logs(self, tmp_path):
-        """Ejecuta modo caos y recopila logs generados."""
-        # Ejecutar en modo caos para generar logs con errores
-        subprocess.run(
-            ["python3", "src/app_operator.py", "AWS", "Azure", "GCP",
-             "-c", "cluster-us-west-02", "-t", "1.5", "--chaos"],
-            capture_output=True, text=True, timeout=30,
-            cwd=str(tmp_path)
-        )
-        self.log_dir = tmp_path
-        self.log_files = list(tmp_path.rglob("*.log")) + list(tmp_path.rglob("*.log.gz"))
-
-    def test_log_files_are_created(self):
-        """Deben generarse archivos de log."""
-        assert len(self.log_files) > 0, "No se generaron archivos de log"
-
-    def test_gzip_files_are_valid(self):
-        """Los archivos .gz deben ser descomprimibles."""
-        gz_files = [f for f in self.log_files if f.suffix == ".gz"]
-        for gz_file in gz_files:
-            with gzip.open(gz_file, "rt") as f:
-                content = f.read()
-            assert len(content) > 0
-
-    def test_json_lines_are_valid(self):
-        """Cada línea del log debe ser JSON válido."""
-        for log_file in self.log_files:
-            if log_file.suffix == ".gz":
-                with gzip.open(log_file, "rt") as f:
-                    lines = f.readlines()
-            else:
-                lines = log_file.read_text().strip().split("\n")
-            
-            for line in lines:
-                if line.strip():
-                    parsed = json.loads(line)
-                    assert isinstance(parsed, dict)
-
-    def test_json_contains_timestamp(self):
-        """Cada entrada JSON debe tener timestamp ISO 8601 UTC."""
-        for log_file in self.log_files:
-            if log_file.suffix == ".gz":
-                with gzip.open(log_file, "rt") as f:
-                    lines = f.readlines()
-            else:
-                lines = log_file.read_text().strip().split("\n")
-            
-            for line in lines:
-                if line.strip():
-                    parsed = json.loads(line)
-                    assert "timestamp" in parsed
-                    assert parsed["timestamp"].endswith("Z")
-
-    def test_exception_entries_have_full_tree(self):
-        """Las entradas de error deben tener árbol de excepciones completo."""
-        for log_file in self.log_files:
-            if log_file.suffix == ".gz":
-                with gzip.open(log_file, "rt") as f:
-                    lines = f.readlines()
-            else:
-                lines = log_file.read_text().strip().split("\n")
-            
-            for line in lines:
-                if line.strip():
-                    parsed = json.loads(line)
-                    if parsed.get("level") in ("ERROR", "CRITICAL"):
-                        if "exception" in parsed:
-                            exc = parsed["exception"]
-                            assert "type" in exc
-                            assert "message" in exc
-```
-
-**Comando para ejecutar solo tests del Integrante 6:**
-```bash
-pytest tests/test_integrante_6/ -v --timeout=60
-```
+- **`respx`**: Para mockear `httpx` y simular fallos de red
+- **`pytest-asyncio`**: Para tests asíncronos
+- **`subprocess`**: Para ejecutar la CLI completa
+- **`gzip`**: Para validar compresión/descompresión
 
 ---
 
@@ -1291,7 +1163,7 @@ pytest tests/ -v -m "unit" --timeout=10
 | **Integrante 3** | `logging_engine.py` (Formatter) | `test_integrante_3/` | ✅ Implementado |
 | **Integrante 4** | `logging_engine.py` (Pipeline) | `test_integrante_4/` | ✅ Implementado |
 | **Integrante 5** | `app_operator.py`, `__init__.py` | `test_integrante_5/` | ✅ Creado (falla hasta implementar) |
-| **Integrante 6** | Suite de caos + forense | `test_integrante_6/` | ✅ Creado (falla hasta implementar) |
+| **Integrante 6** | Suite de caos + forense | `tests/chaos/` o `tests/forense/` | 🔲 A crear por el integrante |
 | **E2E** | Flujo completo | `test_integration/` | ✅ Creado (falla hasta implementar) |
 
 ### 6.3. Criterios de Aceptación por Participante
