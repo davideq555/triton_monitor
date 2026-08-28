@@ -6,3 +6,9 @@ __pycache__/
 dist/
 build/
 .env
+
+# Logs
+logs/
+*.log
+*.log.gz
+triton_services.log
