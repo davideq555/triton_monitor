@@ -19,15 +19,18 @@ class TestCLIParser:
         assert "TRITÓN" in result.stdout or "AWS" in result.stdout or "GCP" in result.stdout, \
             "app_operator.py no produjo output esperado — ¿está implementado?"
 
-    def test_missing_cluster_id_exits_with_code_2(self):
-        """Faltar --cluster-id debe salir con código 2."""
+    def test_cluster_id_is_optional(self):
+        """--cluster-id es OPCIONAL según la especificación TP-1.
+        
+        NO proporcionar -c NO debe causar error de argparse.
+        """
         result = subprocess.run(
             ["python3", "src/app_operator.py", "AWS"],
-            capture_output=True, text=True
+            capture_output=True, text=True, timeout=30
         )
-        assert result.returncode == 2, \
-            f"Esperaba exit code 2 por argumento faltante, obtuvo {result.returncode}"
-        assert "required" in result.stderr.lower() or "error" in result.stderr.lower()
+        # NO debe fallar por argparse (puede fallar por red, pero no por args)
+        assert result.returncode != 2, \
+            f"--cluster-id es opcional, no debería fallar con argparse. Obtuvo: {result.stderr}"
 
     def test_invalid_provider_rejected(self):
         """Proveedor no válido debe ser rechazado por choices."""
