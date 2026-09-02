@@ -15,14 +15,14 @@ from .exceptions import (
 
 logger = logging.getLogger("triton_monitor")
 
-# TODO: endpoints nominales — APIs reales de JSONPlaceholder para AWS/Azure/GCP
+# Endpoints nominales — APIs reales de JSONPlaceholder para AWS/Azure/GCP
 PROVIDER_ENDPOINTS: dict[str, str] = {
     "AWS": "https://jsonplaceholder.typicode.com/posts/1",
     "Azure": "https://jsonplaceholder.typicode.com/posts/2",
     "GCP": "https://jsonplaceholder.typicode.com/posts/3",
 }
 
-# TODO: endpoints de caos — httpbin para inyectar fallos reales de red
+# Endpoints de caos — httpbin para inyectar fallos reales de red
 CHAOS_ENDPOINTS: dict[str, str] = {
     "TIMEOUT_TRIGGER": "https://httpbin.org/delay/3",
     "BAD_GATEWAY_TRIGGER": "https://httpbin.org/status/504",
@@ -48,7 +48,7 @@ async def query_provider_telemetry(
         CorruptedPayloadError: Si el payload no es JSON válido.
         NetworkPeeringError: Si hay fallo HTTP o de red.
     """
-    # TODO: seleccionar endpoint según modo nominal o caos
+    # Seleccionar endpoint según modo nominal o caos
     if use_chaos:
         if provider == "AWS":
             url = CHAOS_ENDPOINTS["TIMEOUT_TRIGGER"]
@@ -66,15 +66,15 @@ async def query_provider_telemetry(
         extra={"provider": provider},
     )
 
-    # TODO: ejecutar petición HTTP asíncrona con control estricto de timeout
+    # Ejecutar petición HTTP asíncrona con control estricto de timeout
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(url, timeout=timeout)
 
-            # TODO: lanzar HTTPStatusError si el código es 4xx o 5xx
+            # Lanzar HTTPStatusError si el código es 4xx o 5xx
             response.raise_for_status()
 
-            # TODO: parseo JSON estructurado del payload
+            # Parseo JSON estructurado del payload
             try:
                 data = response.json()
                 logger.info(
@@ -92,14 +92,14 @@ async def query_provider_telemetry(
                     "payload_id": data.get("id", -1),
                 }
             except (json.JSONDecodeError, ValueError) as err:
-                # TODO: payload corrupto o no serializable — encadenar excepción
+                # Payload corrupto o no serializable — encadenar excepción
                 raise CorruptedPayloadError(
                     f"El proveedor {provider} devolvió un payload no serializable "
                     f"o con errores de paridad."
                 ) from err
 
         except httpx.TimeoutException as err:
-            # TODO: capturar timeout nativo y re-lanzar como ProviderTimeoutError
+            # Capturar timeout nativo y re-lanzar como ProviderTimeoutError
             p_err = ProviderTimeoutError(
                 f"Se agotó el tiempo de espera ({timeout}s) al conectar "
                 f"con {provider}."
@@ -110,7 +110,7 @@ async def query_provider_telemetry(
             raise p_err from err
 
         except httpx.HTTPStatusError as err:
-            # TODO: capturar error HTTP y re-lanzar como CorruptedPayloadError
+            # Capturar error HTTP y re-lanzar como CorruptedPayloadError
             c_err = CorruptedPayloadError(
                 f"Estatus HTTP no esperado recibido del proveedor {provider}. "
                 f"Código: {err.response.status_code}."
@@ -121,7 +121,7 @@ async def query_provider_telemetry(
             raise c_err from err
 
         except httpx.RequestError as err:
-            # TODO: captura genérica de red (DNS, offline, conexión rechazada)
+            # Captura genérica de red (DNS, offline, conexión rechazada)
             n_err = NetworkPeeringError(
                 f"Error crítico de transporte de red al intentar "
                 f"alcanzar {provider}."
@@ -150,17 +150,17 @@ async def scan_all_providers(
     tasks: list[asyncio.Task] = []
     results: list[dict[str, Any]] = []
 
-    # TODO: crear TaskGroup para ejecución concurrente de todas las tareas
+    # Crear TaskGroup para ejecución concurrente de todas las tareas
     async with asyncio.TaskGroup() as tg:
         for provider in providers:
-            # TODO: asignar nombre a cada tarea para trazabilidad en logs
+            # Asignar nombre a cada tarea para trazabilidad en logs
             task = tg.create_task(
                 query_provider_telemetry(provider, timeout, use_chaos),
                 name=f"Task-{provider}",
             )
             tasks.append(task)
 
-    # TODO: colectar resultados solo si no hubo excepciones
+    # Colectar resultados solo si no hubo excepciones
     for task in tasks:
         results.append(task.result())
 
