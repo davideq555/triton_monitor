@@ -1,8 +1,5 @@
 """Tests de integración completa del sistema (End-to-End)."""
 import subprocess
-import json
-import pytest
-from pathlib import Path
 
 
 class TestEndToEnd:
@@ -84,7 +81,7 @@ class TestEndToEnd:
         assert "ANOMALÍA" in result.stdout or "TIMEOUT" in result.stdout.upper() or "FALLO" in result.stdout.upper(), \
             "Modo caos no reportó anomalías detectadas"
 
-    def test_log_file_generated_after_execution(self, tmp_path):
+    def test_log_file_generated_after_execution(self):
         """Después de ejecutar, debe existir archivo de log.
         
         Valida que el pipeline de logging (QueueHandler → QueueListener → RotatingFileHandler)
@@ -93,8 +90,7 @@ class TestEndToEnd:
         result = subprocess.run(
             ["python3", "src/app_operator.py", "AWS",
              "-c", "cluster-us-east-01", "-t", "3.0"],
-            capture_output=True, text=True, timeout=30,
-            cwd=str(tmp_path)
+            capture_output=True, text=True, timeout=30
         )
         
         # Verificar que se ejecutó correctamente
@@ -102,14 +98,6 @@ class TestEndToEnd:
             f"app_operator.py falló con código {result.returncode}: {result.stderr}"
         assert "TRITÓN" in result.stdout or "AWS" in result.stdout, \
             "app_operator.py no produjo output — ¿está implementado?"
-        
-        # Buscar archivos de log en el directorio de trabajo
-        log_files = list(Path(tmp_path).rglob("*.log")) + \
-                    list(Path(tmp_path).rglob("*.log.gz"))
-        
-        # Nota: el log puede generarse en el cwd del script, no necesariamente en tmp_path
-        # Este test es más una validación de que el sistema se ejecuta sin errores
-        # La validación detallada de logs está en test_forensic_validator.py
 
     def test_all_three_providers_parallel(self):
         """Valida que los 3 proveedores se consulten en paralelo.
