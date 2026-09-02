@@ -12,12 +12,6 @@ import argparse
 import asyncio
 import logging
 import logging.config
-import sys
-from pathlib import Path
-
-_SRC_DIR = Path(__file__).resolve().parent
-if str(_SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(_SRC_DIR))
 
 from triton_telemetry.core import scan_all_providers
 from triton_telemetry.exceptions import (
