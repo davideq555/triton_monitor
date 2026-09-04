@@ -159,4 +159,4 @@ ruff check src
 ```
 
 ## Video explicativo
-[![Ver video de demostración](https://youtube.com)](https://youtu.be/NnbD5y-rOP4)
+[![Ver video de demostración](https://img.youtube.com/vi/NnbD5y-rOP4/0.jpg)](https://youtu.be/NnbD5y-rOP4)
