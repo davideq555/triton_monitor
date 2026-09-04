@@ -157,3 +157,6 @@ graph TD
 ```bash
 ruff check src
 ```
+
+## Video explicativo
+[![Ver video de demostración](https://youtube.com)](https://youtu.be/NnbD5y-rOP4)
